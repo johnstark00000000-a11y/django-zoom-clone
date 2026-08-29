@@ -3,325 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zoom Clone - {{ room_name }}</title>
+    <title>Zoom Meeting Room</title>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            box-sizing: border-box;
         }
-
-        body {
-            background-color: #161616;
-            color: #ffffff;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Top Header */
-        .top-bar {
-            height: 48px;
-            background-color: #0f0f0f;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            border-bottom: 1px solid #2d2d2d;
-        }
-
-        .room-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2d8cf0;
-        }
-
-        /* Main Workspace Layout */
-        .workspace {
-            flex: 1;
-            display: flex;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Responsive Video Grid */
-        .video-container {
-            flex: 1;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 12px;
-            padding: 16px;
-            align-content: center;
-            justify-content: center;
-            background-color: #1a1a1a;
-            overflow-y: auto;
-        }
-
-        .video-box {
-            position: relative;
-            background-color: #262626;
-            border-radius: 8px;
-            overflow: hidden;
-            aspect-ratio: 16 / 9;
-            border: 2px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .video-box video {
+        html, body {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            overflow: hidden;
+            background-color: #111111;
         }
-
-        .user-tag {
-            position: absolute;
-            bottom: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        /* Right Side Sidebar (Participants & Chat) */
-        .sidebar {
-            width: 320px;
-            background-color: #222222;
-            border-left: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar.hidden {
-            display: none;
-        }
-
-        .sidebar-tabs {
-            display: flex;
-            border-bottom: 1px solid #333;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            background: none;
-            border: none;
-            color: #aaa;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .tab-btn.active {
-            color: #fff;
-            border-bottom: 2px solid #2d8cf0;
-        }
-
-        .panel-content {
-            flex: 1;
-            padding: 12px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Member List */
-        .member-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #333;
-            font-size: 14px;
-        }
-
-        /* Chat Messages Box */
-        .chat-box {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-
-        .msg-input-group {
-            display: flex;
-            gap: 6px;
-        }
-
-        .msg-input-group input {
-            flex: 1;
-            padding: 8px;
-            background: #1a1a1a;
-            border: 1px solid #444;
-            color: #fff;
-            border-radius: 4px;
-        }
-
-        /* Bottom Controls Bar */
-        .bottom-bar {
-            height: 64px;
-            background-color: #0f0f0f;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            border-top: 1px solid #2d2d2d;
-        }
-
-        .control-btn {
-            background-color: #2b2b2b;
-            border: none;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .control-btn:hover {
-            background-color: #3a3a3a;
-        }
-
-        .btn-end {
-            background-color: #e02828;
-        }
-
-        .btn-end:hover {
-            background-color: #b81d1d;
+        #jitsi-container {
+            width: 100vw;
+            height: 100vh;
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="top-bar">
-        <div class="room-title">Meeting ID: {{ room_name }}</div>
-        <div>User: <b>{{ username }}</b></div>
-    </div>
+    <div id="jitsi-container"></div>
 
-    <!-- Workspace -->
-    <div class="workspace">
-        
-        <!-- Video Grid -->
-        <div class="video-container" id="video-grid">
-            <div class="video-box">
-                <video id="local-video" autoplay muted playsinline></video>
-                <div class="user-tag">{{ username }} (You)</div>
-            </div>
-        </div>
-
-        <!-- Sidebar Panel -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-tabs">
-                <button class="tab-btn active" onclick="switchTab('members')">Participants</button>
-                <button class="tab-btn" onclick="switchTab('chat')">Chat</button>
-            </div>
-
-            <!-- Member List -->
-            <div id="members-panel" class="panel-content">
-                <div class="member-item">
-                    <span>{{ username }}</span>
-                    <small style="color: #2d8cf0;">Host</small>
-                </div>
-            </div>
-
-            <!-- Live Chat -->
-            <div id="chat-panel" class="panel-content" style="display: none;">
-                <div class="chat-box">
-                    <div class="messages" id="chat-messages">
-                        <div><i>Welcome to the meeting!</i></div>
-                    </div>
-                    <div class="msg-input-group">
-                        <input type="text" id="chat-input" placeholder="Type message...">
-                        <button class="control-btn" onclick="sendMessage()">Send</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Bottom Controls -->
-    <div class="bottom-bar">
-        <button class="control-btn" id="mic-btn" onclick="toggleMic()">🎤 Unmute</button>
-        <button class="control-btn" id="cam-btn" onclick="toggleCam()">📹 Stop Video</button>
-        <button class="control-btn" onclick="toggleSidebar()">👥 Sidebar</button>
-        <button class="control-btn btn-end" onclick="leaveRoom()">End Meeting</button>
-    </div>
+    <!-- Free Open-Source Jitsi Meet External API (No API Key Required) -->
+    <script src="https://meet.jit.si/external_api.js"></script>
 
     <script>
-        let localStream;
+        window.onload = function () {
+            const domain = "meet.jit.si";
+            
+            // Unique Room Name for Django
+            const roomName = "DjangoZoomRoom_" + "{{ room_name }}";
+            
+            const options = {
+                roomName: roomName,
+                width: "100%",
+                height: "100%",
+                parentNode: document.querySelector('#jitsi-container'),
+                userInfo: {
+                    displayName: "{{ username }}" || "Guest User"
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
+                    prejoinPageEnabled: true, // Guest Name & Camera Test Preview
+                    disableDeepLinking: true,  // Web browser me hi chalega
+                },
+                interfaceConfigOverwrite: {
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'desktop', 'chat', 
+                        'raisehand', 'participants-pane', 'tileview', 
+                        'toggle-camera', 'fullscreen', 'hangup'
+                    ],
+                }
+            };
 
-        // Camera aur Mic Start karne ka logic
-        async function startCamera() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('local-video').srcObject = localStream;
-            } catch (err) {
-                console.error("Camera access error:", err);
-            }
-        }
-        startCamera();
+            const api = new JitsiMeetExternalAPI(domain, options);
 
-        // Mic Mute/Unmute
-        function toggleMic() {
-            if (localStream) {
-                const audioTrack = localStream.getAudioTracks()[0];
-                audioTrack.enabled = !audioTrack.enabled;
-                document.getElementById('mic-btn').innerText = audioTrack.enabled ? "🎤 Mute" : "🎙️ Unmute";
-            }
-        }
-
-        // Camera On/Off
-        function toggleCam() {
-            if (localStream) {
-                const videoTrack = localStream.getVideoTracks()[0];
-                videoTrack.enabled = !videoTrack.enabled;
-                document.getElementById('cam-btn').innerText = videoTrack.enabled ? "📹 Stop Video" : "📷 Start Video";
-            }
-        }
-
-        // Sidebar Hide/Show
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('hidden');
-        }
-
-        // Switch Tabs (Members <-> Chat)
-        function switchTab(tab) {
-            const tabs = document.querySelectorAll('.tab-btn');
-            tabs[0].classList.toggle('active', tab === 'members');
-            tabs[1].classList.toggle('active', tab === 'chat');
-
-            document.getElementById('members-panel').style.display = tab === 'members' ? 'block' : 'none';
-            document.getElementById('chat-panel').style.display = tab === 'chat' ? 'flex' : 'none';
-        }
-
-        // Chat Message Handling
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            if (input.value.trim() !== '') {
-                const msgContainer = document.getElementById('chat-messages');
-                msgContainer.innerHTML += `<div><b>You:</b> ${input.value}</div>`;
-                input.value = '';
-                msgContainer.scrollTop = msgContainer.scrollHeight;
-            }
-        }
-
-        function leaveRoom() {
-            window.location.href = '/';
-        }
+            // Call disconnect hone par home page par redirect karega
+            api.addEventListeners({
+                videoConferenceLeft: function () {
+                    window.location.href = "/";
+                }
+            });
+        };
     </script>
 </body>
 </html>

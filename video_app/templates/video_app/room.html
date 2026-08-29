@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ meeting.title }}</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; margin: 0; padding: 15px; text-align: center; }
+        .bar { background: #1f1f1f; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 80px; }
+        video { width: 45%; min-width: 280px; background: #000; border-radius: 10px; border: 2px solid #333; }
+        .controls { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 15px; display: flex; justify-content: center; gap: 10px; }
+        button { background: #2D8CFF; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button.off { background: #E53935; }
+    </style>
+</head>
+<body>
+    <div class="bar">
+        <div><strong>{{ meeting.title }}</strong> (ID: {{ meeting.meeting_id }}) {% if is_host %}<b style="color:#4CAF50;">[HOST]</b>{% endif %}</div>
+        <button onclick="copyLink()">Copy Link</button>
+    </div>
+
+    <div class="grid">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+
+    <div class="controls">
+        <button id="micBtn" onclick="toggleMic()">Mic ON</button>
+        <button id="camBtn" onclick="toggleCam()">Cam ON</button>
+        <button onclick="shareScreen()">Share Screen</button>
+    </div>
+
+    <script>
+        const roomName = "{{ room_name }}";
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/call/${roomName}/`);
+
+        let localStream, peerConnection;
+        let micEnabled = true, camEnabled = true;
+        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+        function copyLink() {
+            navigator.clipboard.writeText("{{ join_url }}");
+            alert("Meeting Link Copied!");
+        }
+
+        async function init() {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+
+            socket.onmessage = async (e) => {
+                const data = JSON.parse(e.data);
+                if (data.offer) {
+                    await createPeerConnection();
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    socket.send(JSON.stringify({ offer: peerConnection.localDescription }));
+                } else if (data.answer) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                } else if (data.candidate && peerConnection) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            };
+            setTimeout(makeCall, 1000);
+        }
+
+        function toggleMic() {
+            micEnabled = !micEnabled;
+            localStream.getAudioTracks()[0].enabled = micEnabled;
+            const btn = document.getElementById('micBtn');
+            btn.innerText = micEnabled ? "Mic ON" : "Mic OFF";
+            btn.classList.toggle('off', !micEnabled);
+        }
+
+        function toggleCam() {
+            camEnabled = !camEnabled;
+            localStream.getVideoTracks()[0].enabled = camEnabled;
+            const btn = document.getElementById('camBtn');
+            btn.innerText = camEnabled ? "Cam ON" : "Cam OFF";
+            btn.classList.toggle('off', !camEnabled);
+        }
+
+        async function shareScreen() {
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = screenStream.getVideoTracks()[0];
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                sender.replaceTrack(screenTrack);
+                document.getElementById('localVideo').srcObject = screenStream;
+                screenTrack.onended = () => {
+                    sender.replaceTrack(localStream.getVideoTracks()[0]);
+                    document.getElementById('localVideo').srcObject = localStream;
+                };
+            } catch (err) { console.log(err); }
+        }
+
+        async function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            peerConnection.ontrack = (e) => { document.getElementById('remoteVideo').srcObject = e.streams[0]; };
+            peerConnection.onicecandidate = (e) => {
+                if (e.candidate) socket.send(JSON.stringify({ candidate: e.candidate }));
+            };
+        }
+
+        async function makeCall() {
+            if (peerConnection) return;
+            await createPeerConnection();
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.send(JSON.stringify({ offer: peerConnection.localDescription }));
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Access</title>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: #1e1e1e; padding: 25px; border-radius: 10px; width: 85%; max-width: 320px; text-align: center; }
+        input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 5px; border: none; box-sizing: border-box; }
+        input { background: #2a2a2a; color: white; }
+        button { background: #2D8CFF; color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        {% if mode == 'create' %}
+            <h2>Start New Meeting</h2>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="text" name="title" placeholder="Meeting Topic" required>
+                <button type="submit">Host Meeting</button>
+            </form>
+        {% else %}
+            <h2>Enter Meeting Passcode</h2>
+            {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <input type="password" name="passcode" placeholder="Passcode" required>
+                <button type="submit">Join</button>
+            </form>
+        {% endif %}
+    </div>
+</body>
+</html>
